@@ -5,16 +5,25 @@ export class Calculator {
         }
 
         let delimeterRegex = /[,\n]/;
-        const customDelimeterRegex = new RegExp('//.+\\n');
+        const customDelimeterRegex = /\/\/.+\n/;
 
-        if (numbers.search(customDelimeterRegex) == 0) {
+        if (numbers.search(customDelimeterRegex) === 0) {
             const delimeter = numbers.substring(2, numbers.indexOf('\n'));
-            delimeterRegex = new RegExp(delimeter);
+            
+            const bracketDelimeterRegex = /\[.+\]/g;
+            let bracketDelimiters = delimeter.match(bracketDelimeterRegex);
+
+            if (bracketDelimiters) {
+                bracketDelimiters = bracketDelimiters.map(bd => bd.replace(/\[|\]/g, ''));
+                delimeterRegex = new RegExp(`[\\${bracketDelimiters.join('\\')}]`);
+            } else {
+                delimeterRegex = new RegExp(delimeter);
+            }
+
             numbers = numbers.split(customDelimeterRegex)[1];
         }
 
-        const numbersArr = numbers.split(delimeterRegex).map(number => parseInt(number));
-
+        const numbersArr = numbers.split(delimeterRegex).map(number => Number(number)).filter(number => number <= 1000);
         const negativeNumbers = numbersArr.filter(number => number < 0);
 
         if (negativeNumbers.length) {
