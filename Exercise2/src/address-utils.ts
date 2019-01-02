@@ -28,38 +28,55 @@ export const printAddressesOfType = (addresses: AddressDTO[], type: AddressType)
     return prettyPrintAddresses(typeAddresses);
 }
 
+type ValidationFunction = () => boolean;
+type ValidationResult = { valid: boolean, errorMessage: string };
 
-export const isValidAddress = (address: AddressDTO): boolean => {
+const validate = (condition: boolean | ValidationFunction, errorMsg: string): ValidationResult => {
+    const valid = typeof condition === 'function' ? condition() : condition;
+
+    return {
+        valid,
+        errorMessage: !valid ? errorMsg : null
+    }
+}
+
+export const validateAddress = (address: AddressDTO): { valid: boolean, errorMessages: string[] } => {
     const { postalCode, country, addressLineDetail, provinceOrState } = address;
 
-    if (!postalCode || !country || !addressLineDetail) {
-        return false;
-    }
-
-    let lineDetails = [addressLineDetail.line1, addressLineDetail.line2];
-    lineDetails = lineDetails.filter(ld => ld);
-
-    if (!lineDetails.length) {
-        return false;
-    }
-
-    if (!+postalCode) {
-        return false;
-    }
-    
-    if (!country.code || !country.name) {
-        return false;
-    }
-
-    if (country.code === 'ZA') {
-        if (!provinceOrState) {
+    const addressValidationFn = () => {
+        if (!addressLineDetail) {
             return false;
         }
 
-        if (!provinceOrState.name || !provinceOrState.code) {
-            return false;
-        }
+        let lineDetails = [addressLineDetail.line1, addressLineDetail.line2];
+        lineDetails = lineDetails.filter(ld => !!ld);
+        return lineDetails.length > 0;
+    };
+
+    let result: {
+        hasPostalCode: ValidationResult,
+        numericPostalCode?: ValidationResult,
+        hasCountry: ValidationResult,
+        hasAddressLine: ValidationResult,
+        provinceOrState?: ValidationResult
+    } = {
+        hasPostalCode: validate(!!postalCode, 'Postal code is required'),
+        numericPostalCode: postalCode && validate(!!+postalCode, 'Postal code must be numeric'),
+        hasCountry: validate(!(!country || (!country.code || !country.name)), 'Country is required'),
+        hasAddressLine: validate(addressValidationFn, 'An address line is required'),
+        provinceOrState: country && country.code === 'ZA' && validate(!(!provinceOrState || (!provinceOrState.name || !provinceOrState.code)), 'Province is required for South Africa')
     }
 
-    return true;
+    let validations = Object.keys(result).map(key => {
+        return result[key];
+    }).filter(val => !!val);
+
+    return {
+        valid: validations.every(val => val.valid),
+        errorMessages: validations.map(val => val.errorMessage).filter(msg => !!msg)
+    };
+}
+
+export const isValidAddress = (address: AddressDTO): boolean => {
+    return this.validateAddress(address).valid;
 }

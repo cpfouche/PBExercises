@@ -1,8 +1,6 @@
 import * as chai from 'chai';
-import { printAddresses, printInvalidAddresses } from '../index';
-import { isValidAddress } from '../address-utils';
+import { printAddresses, printAddressesValidity } from '../index';
 import { AddressDTO } from '../address.dto';
-import { AddressType } from '../address-type.enum';
 import * as fs from 'fs';
 
 const expect = chai.expect;
@@ -17,10 +15,8 @@ describe('Address File Handling', () => {
         expect(printed.split('\n').length).to.be.equal(addresses.length);
     });
 
-    it('prints invalid addresses in file', () => {
-        const printed = printInvalidAddresses();
-        const invalidAddresses = addresses.filter(address => !isValidAddress(address));
-        const invalidIds = invalidAddresses.map(address => address.id);
-        expect(printed).to.be.equal(`The following addresses are incorrect:\n${invalidIds.join('\n')}`);
+    it('prints validation of addresses in file', () => {
+        const printValidation = printAddressesValidity();
+        expect(printValidation.split('\n').length).to.be.equal(addresses.length+1);
     });
 })
